@@ -1,6 +1,7 @@
-local TYPE = require("enum.type")
+local thispath = string.match(select("1", ...), ".+%.") or ""
+local TYPE = require(thispath .. "enum.type")
 
-local nut = { Receivers = {} }
+local nut = {}
 
 -- receiving
 
@@ -99,7 +100,7 @@ function nut.WriteUInt(uint, bits)
 		local curbyte = nut._writepos // 8
 		local bits_remaining_in_curbyte = 8 - (nut._writepos % 8)
 
-		local num_bits_to_add = math.min(bits_remaining_in_curbyte, bits_remaining)
+		local num_bits_to_write = math.min(bits_remaining_in_curbyte, bits_remaining)
 
 		local bits_to_write = uint >> (bits_remaining - num_bits_to_write)
 
