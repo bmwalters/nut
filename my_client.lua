@@ -8,7 +8,10 @@ local net, util = myclient:CreateNetLibrary()
 
 net.Receive("test_broadcast", function(len)
 	print("Received test broadcast from server with len: ", len)
-	print("Received uint: ", net.ReadUInt(8))
+	print("Received: ", net.ReadType())
+	print("Received: ", net.ReadType())
+	print("Received: ", net.ReadType())
+	print("Received: ", net.ReadType())
 end)
 
 -- now start the loop

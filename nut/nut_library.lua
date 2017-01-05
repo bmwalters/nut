@@ -1,5 +1,6 @@
 local thispath = string.match(select("1", ...), ".+%.") or ""
-local TYPE = require(thispath .. "enum.type")
+local TYPE = require(thispath .. "gmod.enum.type")
+local TypeID = require(thispath .. "gmod.typeid")
 
 local nut = {}
 
@@ -180,6 +181,28 @@ function nut.WriteString(str)
 	nut.WriteUInt(0, 8)
 end
 
+function nut.ReadTable()
+	local tab = {}
+
+	local key = nut.ReadType()
+
+	while key do
+		tab[key] = nut.ReadType()
+		key = nut.ReadType()
+	end
+
+	return tab
+end
+
+function nut.WriteTable(data)
+	for k, v in pairs(data) do
+		nut.WriteType(k)
+		nut.WriteType(v)
+	end
+
+	nut.WriteType(nil)
+end
+
 local typefuncs = {
 	[TYPE.NIL]    = { function() end, function() end },
 	[TYPE.STRING] = { nut.ReadString, nut.WriteString },
@@ -216,28 +239,6 @@ function nut.WriteType(data)
 	else
 		error("net.WriteType: Couldn't write " .. type(data) .. " (type " .. typeid .. ")")
 	end
-end
-
-function nut.ReadTable()
-	local tab = {}
-
-	local key = nut.ReadType()
-
-	while key do
-		tab[key] = nut.ReadType()
-		key = nut.ReadType()
-	end
-
-	return tab
-end
-
-function nut.WriteTable(data)
-	for k, v in pairs(tab) do
-		nut.WriteType(k)
-		nut.WriteType(v)
-	end
-
-	nut.WriteType(nil)
 end
 
 function nut.ReadEntity()

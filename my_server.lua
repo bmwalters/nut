@@ -15,7 +15,10 @@ util.AddNetworkString("test_broadcast")
 
 function test_broadcast()
 	net.Start("test_broadcast")
-		net.WriteUInt(42, 8)
+		net.WriteType({ dog = "cat" })
+		net.WriteType("Hello World")
+		net.WriteType(nil)
+		net.WriteType(true)
 	net.Broadcast()
 end
 
