@@ -1,6 +1,8 @@
 local thispath = string.match(select("1", ...), ".+%.") or ""
 local nut_library_base = require(thispath .. "nut_library")
 
+local BitBuffer = require(thispath .. "bitbuf.bitbuf")
+
 local socket = require("socket")
 local copas = require("copas")
 
@@ -16,17 +18,14 @@ function NUTCLIENT:NetworkStringToID(str)
 	return self._stringtoid[str] or 0
 end
 
-local function buftouint16(buf)
-	return buf:byte(1) << 8 | buf:byte(2)
-end
-
 function NUTCLIENT:ReceiveStringTable(sock)
-	local num_entries = buftouint16(copas.receive(sock, 2))
+	local num_entries = BitBuffer(sock:receive(2)):ReadUInt(16)
 
 	for i = 1, num_entries do
-		local id = buftouint16(copas.receive(sock, 2))
-		local name_len = buftouint16(copas.receive(sock, 2))
-		local name = copas.receive(sock, name_len)
+		local data = BitBuffer(sock:receive(4))
+		local id = data:ReadUInt(16)
+		local name_len = data:ReadUInt(16)
+		local name = sock:receive(name_len)
 		self._stringtable[id] = name
 		self._stringtoid[name] = id
 		print("Received string table entry", id, name)
@@ -45,9 +44,9 @@ function NUTCLIENT:ConnectToServer(host, port)
 
 		local datasize_buf = copas.receive(self._clientsocket, 2)
 		if datasize_buf then
-			local datasize = buftouint16(datasize_buf)
+			local datasize = BitBuffer(datasize_buf):ReadUInt(16)
 			local data = copas.receive(self._clientsocket, datasize)
-			self:_OnMessageReceived(datasize, data)
+			self:_OnMessageReceived(datasize, BitBuffer(data))
 		end
 	end)
 
@@ -83,14 +82,7 @@ function NUTCLIENT:CreateNetLibrary()
 	end
 
 	function self:_OnMessageReceived(len, data_buf)
-		local data = {}
-
-		for i = 1, #data_buf do
-			data[i] = data_buf:byte(i)
-		end
-
-		net.state._readpos = 0
-		net.state._readbuf = data
+		net.state._readbuf = data_buf
 
 		net.Incoming(len * 8) -- todo: accurate len?
 	end

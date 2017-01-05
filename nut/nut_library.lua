@@ -73,56 +73,19 @@ local function first_n_bits(num, bits)
 end
 
 function nut.ReadUInt(bits)
-	local bits_remaining = bits
-
-	local num = 0
-
-	while bits_remaining > 0 do
-		local curbyte = nut._readpos // 8
-		local bits_remaining_in_curbyte = 8 - (nut._readpos % 8)
-
-		local num_bits_to_read = math.min(bits_remaining_in_curbyte, bits_remaining)
-
-		local truncate_to = (8 - (nut._readpos % 8))
-		local read_bits = (nut._readbuf[curbyte + 1] & (2 ^ truncate_to - 1)) >> (truncate_to - num_bits_to_read)
-
-		num = (num << num_bits_to_read) | read_bits
-		bits_remaining = bits_remaining - num_bits_to_read
-		nut._readpos = nut._readpos + num_bits_to_read
-	end
-
-	return num
+	return nut._readbuf:ReadUInt(bits)
 end
 
 function nut.WriteUInt(uint, bits)
-	local bits_remaining = bits
-
-	while bits_remaining > 0 do
-		local curbyte = nut._writepos // 8
-		local bits_remaining_in_curbyte = 8 - (nut._writepos % 8)
-
-		local num_bits_to_write = math.min(bits_remaining_in_curbyte, bits_remaining)
-
-		local bits_to_write = uint >> (bits_remaining - num_bits_to_write)
-
-		nut._writebuf[curbyte + 1] = (nut._writebuf[curbyte + 1] or 0) | (bits_to_write << (8 - num_bits_to_write - (nut._writepos % 8)))
-
-		uint = uint & (2 ^ (bits_remaining - num_bits_to_write) - 1)
-		bits_remaining = bits_remaining - num_bits_to_write
-		nut._writepos = nut._writepos + num_bits_to_write
-	end
+	nut._writebuf:WriteUInt(uint, bits)
 end
 
 function nut.ReadInt(bits)
-	local sign = nut.ReadUInt(1)
-	local num = nut.ReadUInt(bits - 1)
-	if sign == 1 then num = -num end
-	return num
+	return nut._readbuf:ReadInt(bits)
 end
 
 function nut.WriteInt(int, bits)
-	nut.WriteUInt((int < 0) and 1 or 0, 1)
-	nut.WriteUInt(math.abs(int), bits - 1)
+	nut._writebuf:WriteInt(int, bits)
 end
 
 function nut.ReadFloat()
@@ -142,15 +105,12 @@ function nut.WriteDouble(double)
 end
 
 function nut.ReadBit()
-	return nut.ReadUInt(1)
+	return nut._readbuf:ReadBit()
 end
 
 function nut.WriteBit(bool_or_bit)
-	if bool_or_bit == false or bool_or_bit == 0 then
-		nut.WriteUInt(0, 1)
-	else
-		nut.WriteUInt(1, 1)
-	end
+	local bit = (bool_or_bit == false or bool_or_bit == 0) and 0 or 1
+	nut._writebuf:WriteBit(bit)
 end
 
 function nut.ReadBool()
@@ -162,23 +122,11 @@ function nut.WriteBool(bool)
 end
 
 function nut.ReadString()
-	local s = ""
-	local c = nut.ReadUInt(8)
-
-	while c ~= 0 do
-		s = s .. string.char(c)
-		c = nut.ReadUInt(8)
-	end
-
-	return s
+	return nut._readbuf:ReadString()
 end
 
 function nut.WriteString(str)
-	for i = 1, #str do
-		nut.WriteUInt(string.byte(string.sub(str, i, i)), 8)
-	end
-
-	nut.WriteUInt(0, 8)
+	nut._writebuf:WriteString(str)
 end
 
 function nut.ReadTable()

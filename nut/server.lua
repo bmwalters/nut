@@ -1,6 +1,8 @@
 local thispath = string.match(select("1", ...), ".+%.") or ""
 local nut_library_base = require(thispath .. "nut_library")
 
+local BitBuffer = require(thispath .. "bitbuf.bitbuf")
+
 local socket = require("socket")
 local copas = require("copas")
 
@@ -53,35 +55,23 @@ function NUTSERVER:Listen(host, port)
 	copas.loop()
 end
 
-local function uint16tobuf(uint16)
-	return string.char(uint16 >> 8) .. string.char(uint16 & tonumber("11111111", 2))
-end
-
 function NUTSERVER:SendClientStringTable(client)
 	local num_entries = #self._stringtable
 
-	copas.send(client, uint16tobuf(num_entries))
+	copas.send(client, BitBuffer():WriteUInt(num_entries, 16):AsString())
 
 	for id = 1, num_entries do
-		copas.send(client, uint16tobuf(id))
+		copas.send(client, BitBuffer():WriteUInt(id, 16):AsString())
 		local name = self._stringtable[id]
-		copas.send(client, uint16tobuf(#name))
+		copas.send(client, BitBuffer():WriteUInt(#name, 16):AsString())
 		copas.send(client, name)
 	end
 end
 
 function NUTSERVER:SendClientMessage(client, writebuf)
-	local len = #writebuf
+	copas.send(client, BitBuffer():WriteUInt(#writebuf, 16):AsString())
 
-	copas.send(client, uint16tobuf(len))
-
-	local str = ""
-
-	for _, byte in ipairs(writebuf) do
-		str = str .. string.char(byte)
-	end
-
-	local sent, err = copas.send(client, str)
+	local sent, err = copas.send(client, writebuf:AsString())
 	print("Sent message to", client, "message:", sent, "err:", err)
 end
 
@@ -115,8 +105,7 @@ function NUTSERVER:CreateNetLibrary()
 			error("Calling net.Start with unpooled message name [http://goo.gl/qcx0y]")
 		end
 
-		net.state._writebuf = {}
-		net.state._writepos = 0
+		net.state._writebuf = BitBuffer()
 		net.state.Receivers = {}
 
 		net.WriteUInt(self._stringtoid[name], 16)
