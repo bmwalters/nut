@@ -58,14 +58,18 @@ end
 function NUTSERVER:SendClientStringTable(client)
 	local num_entries = #self._stringtable
 
-	copas.send(client, BitBuffer():WriteUInt(num_entries, 16):AsString())
+	local buffer = BitBuffer()
+
+	buffer:WriteUInt(num_entries, 16)
 
 	for id = 1, num_entries do
-		copas.send(client, BitBuffer():WriteUInt(id, 16):AsString())
-		local name = self._stringtable[id]
-		copas.send(client, BitBuffer():WriteUInt(#name, 16):AsString())
-		copas.send(client, name)
+		buffer:WriteUInt(id, 16)
+		buffer:WriteString(self._stringtable[id])
 	end
+
+	local lenstr = BitBuffer():WriteUInt(#buffer, 24):AsString()
+
+	copas.send(client, lenstr .. buffer:AsString())
 end
 
 function NUTSERVER:SendClientMessage(client, writebuf)

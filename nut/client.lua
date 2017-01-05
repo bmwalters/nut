@@ -19,13 +19,14 @@ function NUTCLIENT:NetworkStringToID(str)
 end
 
 function NUTCLIENT:ReceiveStringTable(sock)
-	local num_entries = BitBuffer(sock:receive(2)):ReadUInt(16)
+	local len = BitBuffer(sock:receive(3)):ReadUInt(24)
+	local buffer = BitBuffer(sock:receive(len))
 
-	for i = 1, num_entries do
-		local data = BitBuffer(sock:receive(4))
-		local id = data:ReadUInt(16)
-		local name_len = data:ReadUInt(16)
-		local name = sock:receive(name_len)
+	local num_entries = buffer:ReadUInt(16)
+
+	for _ = 1, num_entries do
+		local id = buffer:ReadUInt(16)
+		local name = buffer:ReadString()
 		self._stringtable[id] = name
 		self._stringtoid[name] = id
 		print("Received string table entry", id, name)
